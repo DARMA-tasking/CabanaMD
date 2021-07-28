@@ -81,6 +81,8 @@ class SystemCommon
     typedef typename t_mass::HostMirror h_t_mass;
     t_mass mass;
 
+    int halo_width;
+
     // Simulation total domain
     T_X_FLOAT global_mesh_x, global_mesh_y, global_mesh_z;
 
@@ -93,6 +95,8 @@ class SystemCommon
     std::shared_ptr<
         Cabana::Grid::LocalGrid<Cabana::Grid::UniformMesh<T_X_FLOAT>>>
         local_grid;
+    std::shared_ptr<Cajita::GlobalGrid<Cajita::UniformMesh<T_X_FLOAT>>>
+        global_grid;
 
     // Only needed for current comm
     std::array<int, 3> ranks_per_dim;
@@ -143,8 +147,8 @@ class SystemCommon
 
         // Create the global grid.
         std::array<bool, 3> is_periodic = { true, true, true };
-        auto global_grid = Cabana::Grid::createGlobalGrid(
-            MPI_COMM_WORLD, global_mesh, is_periodic, partitioner );
+        global_grid = Cajita::createGlobalGrid( MPI_COMM_WORLD, global_mesh,
+                                                is_periodic, partitioner );
 
         for ( int d = 0; d < 3; d++ )
         {
@@ -152,10 +156,9 @@ class SystemCommon
         }
 
         // Create a local mesh
-        int halo_width = 1;
-        local_grid = Cabana::Grid::createLocalGrid( global_grid, halo_width );
-        auto local_mesh =
-            Cabana::Grid::createLocalMesh<t_device>( *local_grid );
+        halo_width = 1;
+        local_grid = Cajita::createLocalGrid( global_grid, halo_width );
+        auto local_mesh = Cajita::createLocalMesh<t_device>( *local_grid );
 
         local_mesh_lo_x = local_mesh.lowCorner( Cabana::Grid::Own(), 0 );
         local_mesh_lo_y = local_mesh.lowCorner( Cabana::Grid::Own(), 1 );
@@ -172,6 +175,26 @@ class SystemCommon
         local_mesh_x = local_mesh.extent( Cabana::Grid::Own(), 0 );
         local_mesh_y = local_mesh.extent( Cabana::Grid::Own(), 1 );
         local_mesh_z = local_mesh.extent( Cabana::Grid::Own(), 2 );
+    }
+    // low_corner and high_corner are local corners, not globa as in create_domain!
+    void update_domain( std::array<double, 3> low_corner,
+                        std::array<double, 3> high_corner )
+    {
+        local_mesh_lo_x = low_corner[0];
+        local_mesh_lo_y = low_corner[1];
+        local_mesh_lo_z = low_corner[2];
+        local_mesh_hi_x = high_corner[0];
+        local_mesh_hi_y = high_corner[1];
+        local_mesh_hi_z = high_corner[2];
+        local_mesh_x = local_mesh_hi_x - local_mesh_lo_x;
+        local_mesh_y = local_mesh_hi_y - local_mesh_lo_y;
+        local_mesh_z = local_mesh_hi_z - local_mesh_lo_z;
+        ghost_mesh_lo_x = local_mesh_lo_x - halo_width*local_mesh_x;
+        ghost_mesh_lo_y = local_mesh_lo_y - halo_width*local_mesh_y;
+        ghost_mesh_lo_z = local_mesh_lo_z - halo_width*local_mesh_z;
+        ghost_mesh_hi_x = local_mesh_hi_x + halo_width*local_mesh_x;
+        ghost_mesh_hi_y = local_mesh_hi_y + halo_width*local_mesh_y;
+        ghost_mesh_hi_z = local_mesh_hi_z + halo_width*local_mesh_z;
     }
 
     void slice_all()
