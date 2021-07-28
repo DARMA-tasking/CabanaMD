@@ -18,6 +18,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 ##---------------------------------------------------------------------------##
 find_package(Cabana REQUIRED)
 
+if( NOT Cabana_ENABLE_MPI )
+  message( FATAL_ERROR "Cabana must be compiled with MPI" )
+endif()
+if( NOT Cabana_ENABLE_CAJITA )
+  message( FATAL_ERROR "Cabana must be compiled with Cajita" )
+endif()
+
+find_package(ALL 0.9.1 REQUIRED)
+
 ##---------------------------------------------------------------------------##
 # Set up optional libraries
 ##---------------------------------------------------------------------------##
