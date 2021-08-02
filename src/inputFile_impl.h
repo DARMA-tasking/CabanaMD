@@ -77,6 +77,46 @@ InputFile<t_System>::InputFile( InputCL commandline_, t_System *system_ )
 
     output_file = commandline.output_file;
     error_file = commandline.error_file;
+
+    // set defaults (matches ExaMiniMD LJ example)
+
+    nsteps = 0;
+
+    thermo_rate = 0;
+    dumpbinary_rate = 0;
+    correctness_rate = 0;
+    dumpbinaryflag = false;
+    correctnessflag = false;
+    timestepflag = false;
+
+    lattice_offset_x = 0.0;
+    lattice_offset_y = 0.0;
+    lattice_offset_z = 0.0;
+    box[0] = 0;
+    box[2] = 0;
+    box[4] = 0;
+    box[1] = 40;
+    box[3] = 40;
+    box[5] = 40;
+
+    units_style = UNITS_LJ;
+    lattice_style = LATTICE_FCC;
+    lattice_constant = 0.8442;
+
+    temperature_target = 1.4;
+    temperature_seed = 87287;
+
+    nsteps = 100;
+    thermo_rate = 10;
+
+    neighbor_skin = 0.3;
+    neighbor_skin = 0.0; // for metal and real units
+    max_neigh_guess = 50;
+    comm_exchange_rate = 20;
+    comm_ghost_cutoff = std::pow( ( 4.0 / lattice_constant ), ( 1.0 / 3.0 ) ) *
+                        20.0; // 20 lattice constants
+
+    force_cutoff = 2.5;
 }
 
 template <class t_System>
@@ -372,6 +412,27 @@ void InputFile<t_System>::check_lammps_command( std::string line,
             }
         }
     }
+    if ( keyword.compare( "comm_modify" ) == 0 )
+    {
+        if ( words.at( 1 ).compare( "cutoff" ) == 0 )
+        {
+            if ( words.at( 2 ).compare( "*" ) == 0 )
+            {
+                known = true;
+                comm_ghost_cutoff = std::stod( words.at( 3 ) );
+            }
+            else
+            {
+                log_err( err, "LAMMPS-Command: 'comm_modify' command only "
+                              "supported for all atom types '*' in CabanaMD" );
+            }
+        }
+        else
+        {
+            log_err( err, "LAMMPS-Command: 'comm_modify' command only supports "
+                          "single cutoff 'cutoff' in CabanaMD" );
+        }
+    }
     if ( keyword.compare( "fix" ) == 0 )
     {
         if ( words.at( 3 ).compare( "nve" ) == 0 )
@@ -458,7 +519,7 @@ void InputFile<t_System>::create_lattice( Comm<t_System> *comm )
     // global_high[0] *= 2;
     // global_high[1] *= 2;
     // global_high[2] *= 2;
-    system->create_domain( global_low, global_high );
+    system->create_domain( global_low, global_high, comm_ghost_cutoff );
     s = *system;
 
     auto local_mesh_lo_x = s.local_mesh_lo_x;
