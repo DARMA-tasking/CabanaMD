@@ -33,11 +33,8 @@ if(NOT DEFINED N2P2_DIR)
   set(N2P2_DIR ~/n2p2/)
 endif()
 
-option(CabanaMD_ENABLE_ALL "Build CabanaMD with ALL load balancing" OFF)
-if(CabanaMD_ENABLE_ALL)
-  # todo(sschulz): All versions from 0.9.2 onwards should be fine.
-  find_package(ALL 0.9.2 REQUIRED)
-endif()
+# todo(sschulz): All versions from 0.9.2 onwards should be fine.
+#CabanaMD_add_dependency( PACKAGE "ALL" VERSION 0.9.2 )
 
 ##---------------------------------------------------------------------------##
 ## Print the Git revision number to stdout
